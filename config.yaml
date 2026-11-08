@@ -1,0 +1,65 @@
+# Everything that can change a result lives here. Scripts never hard-code these values.
+
+paths:
+  transactions: data/processed/transactions_clean.csv   # Stage 3 output: account_id, txn_date_time, billing_amount
+  stage4_features: data/processed/features_targets.csv # optional: only used to cross-check features.py
+  models: models
+  reports: reports
+  db: db/forecasts.db
+
+data:
+  id_col: account_id
+  month_col: month
+  target_col: target_balance
+  drop_first_months: 1          # the first month has no history (no lags)
+
+split:
+  test_share: 0.2               # last 20% of months, whole months only, at least 1
+  n_folds: 3                    # walk-forward folds inside the training months
+  min_train_months: 2           # each fold trains on at least this many months
+
+features:
+  # the 12 features kept by the Stage 5 ablation (calendar + category spend dropped: tie -> smaller set)
+  use:
+    - balance_lag1
+    - balance_lag2
+    - balance_lag3
+    - balance_mean_3m
+    - balance_std_3m
+    - credit_lag1
+    - debit_lag1
+    - net_lag1
+    - credit_avg_3m
+    - debit_avg_3m
+    - net_avg_3m
+    - txn_count_lag1
+
+model:
+  loss: absolute_error          # the metric is MAE
+  seed: 0
+  default_params:               # Stage 5 settings
+    learning_rate: 0.05
+    max_iter: 200
+    max_depth: 3
+    min_samples_leaf: 20
+
+tuning:
+  n_trials: 50
+  timeout_seconds: 600
+  seed: 0
+  ranges:
+    learning_rate: [0.01, 0.2]      # log scale
+    max_iter: [100, 600]
+    max_depth: [2, 6]
+    min_samples_leaf: [10, 80]
+    l2_regularization: [0.001, 10]  # log scale
+  min_gain_over_default: 2.0        # keep the default settings unless tuning wins by this many dollars
+
+evaluation:
+  bootstrap_samples: 1000
+  seed: 0
+
+promotion:
+  min_gain_vs_drift: 2.0            # boosting must beat drift by at least this many dollars ...
+  require_ci_below_zero: true       # ... and the bootstrap 95% interval must be entirely below 0
+  min_gain_vs_saved: 2.0            # a new model replaces the saved one only if it wins by this much

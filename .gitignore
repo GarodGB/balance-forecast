@@ -1,0 +1,14 @@
+# data stays out of git (private), outputs can be rebuilt by running the scripts
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+reports/*
+!reports/.gitkeep
+db/*
+!db/.gitkeep
+__pycache__/
+.pytest_cache/
+.venv/
